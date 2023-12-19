@@ -13,8 +13,8 @@
 ### CA file to install
 ###
 
-certfile="/home/mitmproxyuser/.mitmproxy/mitmproxy-ca-cert.pem"
-certname="mitmproxy-3"
+certfile="/home/zenuser/.mitmproxy/mitmproxy-ca-cert.pem"
+certname="zen"
 
 
 ###
