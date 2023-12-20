@@ -1,1 +1,38 @@
-{"coding": {"name": "coding", "websites": ["https://www.google.com/", "https://unix.stackexchange.com/", "https://chat.openai.com/", "https://stackoverflow.com/", "https://github.com/", "https://docs.readthedocs.io/"], "filters": {"https://www.google.com/": ["test", "tbm=isch"]}, "apps": []}}
+{
+    "coding": {
+        "websites": [
+            "https://unix.stackexchange.com/",
+            "https://stackoverflow.com/",
+            "https://docs.readthedocs.io/",
+            "https://www.google.com/",
+            "https://chat.openai.com/"
+        ],
+        "urlfilters": {
+            "https://www.example.com/": [
+                "example"
+            ],
+            "https://www.google.com/": [
+                "tbm=isch"
+            ]
+        },
+        "programs": []
+    }
+}
+    
+        
+        
+        
+        
+        
+    
+    
+        
+            
+        
+        
+            
+        
+    
+    
+
+
