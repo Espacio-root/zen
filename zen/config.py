@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from addons import Websites, UrlFilters, Programs
+from plugins import Websites, UrlFilters, Programs
 import json
 import os
 
