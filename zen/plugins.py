@@ -1,5 +1,6 @@
 import os
 import re
+import logging
 
 
 class Field:
@@ -32,12 +33,12 @@ class Field:
     def load_config(self, config) -> None:
         self.config = config
 
-    def filter(self, flow) -> bool:
+    def is_present(self, flow) -> bool:
         return False
 
     def _check_interception(self, flow) -> bool:
-        to_block = self.filter(flow)
-        if to_block and self.block_type == "blacklist" or (not to_block) and self.block_type == "whitelist":
+        is_present = self.is_present(flow)
+        if (self.block_type == 'w' and not is_present) or (self.block_type == 'b' and is_present):
             return True
         else: return False
 
@@ -52,7 +53,7 @@ class Websites(Field):
     def process_field(values: list):
         return [value.strip() for value in values if re.match(r"^https?://", value)]
 
-    def filter(self, flow):
+    def is_present(self, flow):
         if any([url in flow.request.pretty_url for url in self.config]):
             return True
 
@@ -97,7 +98,7 @@ class UrlFilters(Field):
     def post_update(self, field):
         return self.process_field(field)
 
-    def filter(self, flow) -> bool:
+    def is_present(self, flow) -> bool:
         url = flow.request.pretty_url
         for k,vs in self.config.items():
             for v in vs:
