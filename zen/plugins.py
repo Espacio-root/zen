@@ -9,6 +9,9 @@ class Field:
         self.required = False
         self.default = []
         self.idx = idx
+        self.config = None
+        self.field_type = "bool"
+        self.block_type = "whitelist"
 
     @staticmethod
     def process_field(values: list):
@@ -26,6 +29,18 @@ class Field:
     def post_update(self, field):
         return field
 
+    def load_config(self, config) -> None:
+        self.config = config
+
+    def filter(self, flow) -> bool:
+        return False
+
+    def _check_interception(self, flow) -> bool:
+        to_block = self.filter(flow)
+        if to_block and self.block_type == "blacklist" or (not to_block) and self.block_type == "whitelist":
+            return True
+        else: return False
+
 
 class Websites(Field):
     def __init__(self, idx: int):
@@ -36,6 +51,10 @@ class Websites(Field):
     @staticmethod
     def process_field(values: list):
         return [value.strip() for value in values if re.match(r"^https?://", value)]
+
+    def filter(self, flow):
+        if any([url in flow.request.pretty_url for url in self.config]):
+            return True
 
 
 class Programs(Field):
@@ -77,3 +96,10 @@ class UrlFilters(Field):
 
     def post_update(self, field):
         return self.process_field(field)
+
+    def filter(self, flow) -> bool:
+        url = flow.request.pretty_url
+        for k,vs in self.config.items():
+            for v in vs:
+                if k in url and v in url:
+                    return True

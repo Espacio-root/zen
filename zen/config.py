@@ -2,8 +2,9 @@ from argparse import ArgumentParser
 from plugins import Websites, UrlFilters, Programs
 import json
 import os
+import shlex
 
-dir_name = os.path.dirname(os.path.dirname(os.path.abspath("__file__")))
+dir_name = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE_CONFIG_PATH = f"{dir_name}/configs/base_config.json"
 
 
@@ -11,6 +12,7 @@ class Config:
     def __init__(self, fields: list):
         self.base_path = BASE_CONFIG_PATH
         self.fields = [field(idx + 1) for idx, field in enumerate(fields)]
+        self.args = None
         if not os.path.exists(BASE_CONFIG_PATH):
             self._write_config({})
 
@@ -79,6 +81,8 @@ class Config:
             action="store_true",
             help="Update existing config",
         )
+        parser.add_argument("-b", "--blocktype", dest='block_type', help="Type of block: whitelist(w) or blacklist(b). Represent different setting for different plugin by concatenating the block_type. Example: wwb", default='wwb')
+        parser.add_argument("-t", "--time", dest='time', help="Time for which to maintain block in minutes. Example: 30 45 180", default=2)
         for field in self.fields:
             parser.add_argument(
                 f"-f{field.idx}",
@@ -88,7 +92,7 @@ class Config:
                 help=field.help,
                 default=field.default,
             )
-        args = parser.parse_args()
+        args = parser.parse_args() if not self.args else parser.parse_args(shlex.split(self.args))
         return args
 
     def _add_subconfig(self, config):
@@ -96,8 +100,20 @@ class Config:
         base_config.update(config)
         self._write_config(base_config)
 
+    def _set_args(self, args):
+        block_type = args.block_type
+        if len(block_type) == 1:
+            block_type *= len(self.fields)
+        elif len(block_type) < len(self.fields):
+            block_type += block_type[-1] * len(self.fields) - len(block_type)
+        m = {'w': 'whitelist', 'b': 'blacklist'}
+        for plugin, b_type in zip(self.fields, block_type):
+            plugin.block_type = m[b_type]
+        self.time = args.time
+
     def run(self):
         args = self.parse_args()
+        self._set_args(args)
         if args.update:
             method = "subtract" if args.remove else "add"
             config = self.update_config(
@@ -114,6 +130,8 @@ class Config:
         elif args.remove:
             config = self.get_config(args.name)
             self.remove_config(args.name)
+        else:
+            config = self.get_config(args.name)
 
         return config
 
