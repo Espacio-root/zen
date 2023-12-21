@@ -1,7 +1,9 @@
 import os
 import re
-import logging
-
+import psutil
+from time import sleep
+from threading import Thread
+from datetime import datetime, timedelta
 
 class Field:
     def __init__(self, idx: int):
@@ -11,8 +13,9 @@ class Field:
         self.default = []
         self.idx = idx
         self.config = None
-        self.field_type = "bool"
-        self.block_type = "whitelist"
+        self.block_type = "w"
+        self.block_m = {'w': 'whitelist', 'b': 'blacklist'}
+        self.time = 2
 
     @staticmethod
     def process_field(values: list):
@@ -36,11 +39,14 @@ class Field:
     def is_present(self, flow) -> bool:
         return False
 
+    def pre_block(self):
+        pass
+
     def _check_interception(self, flow) -> bool:
         is_present = self.is_present(flow)
         if (self.block_type == 'w' and not is_present) or (self.block_type == 'b' and is_present):
-            return True
-        else: return False
+            return True, flow
+        else: return False, flow
 
 
 class Websites(Field):
@@ -67,6 +73,29 @@ class Programs(Field):
     @staticmethod
     def process_field(values: list):
         return [value.strip() for value in values if os.path.exists(value.strip())]
+    
+    def pre_block(self):
+        Thread(target=self.kill_process_by_path, args=(self.config))
+        
+
+    def kill_process_by_path(self, target_paths):
+        """Kill a process if its executable path matches the target path."""
+        st = datetime.now()
+        while st + timedelta(minutes=self.time) < datetime.now():
+            for process in psutil.process_iter(['pid', 'name', 'exe']):
+                try:
+                    process_path = process.info['exe']
+                except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                    # Handle exceptions that may occur when accessing process information
+                    continue
+
+                if process_path and any(target_path in process_path for target_path in target_paths):
+                    print(f"Killing process {process.info['name']} (PID {process.info['pid']})")
+                    try:
+                        os.kill(process.info['pid'], 9)  # Send SIGKILL signal
+                    except OSError as e:
+                        print(f"Error killing process: {e}")
+            sleep(1)
 
 
 class UrlFilters(Field):

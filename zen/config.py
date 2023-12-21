@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from plugins import Websites, UrlFilters, Programs
+from plugins.core import Websites, UrlFilters, Programs
 import json
 import os
 import shlex
