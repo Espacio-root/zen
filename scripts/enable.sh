@@ -16,4 +16,4 @@ sudo ip6tables -t nat -A OUTPUT -p udp -m owner ! --uid-owner zenuser --dport 80
 sudo ip6tables -t nat -A OUTPUT -p udp -m owner ! --uid-owner zenuser --dport 443 -j REDIRECT --to-port 8080
 
 # Start mitmproxy
-sudo -u zenuser -H bash -c "/usr/bin/mitmproxy -s $dir/zen/blocker.py --set args=\"-c coding\" --mode transparent --showhost --set block_global=false"
+sudo -u zenuser -H bash -c "/usr/bin/mitmproxy -s $dir/zen/blocker.py --set args=\"-c coding music\" --mode transparent --showhost --set block_global=false"

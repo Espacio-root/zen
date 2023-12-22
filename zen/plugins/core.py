@@ -4,6 +4,7 @@ import psutil
 from time import sleep
 from threading import Thread
 from datetime import datetime, timedelta
+import logging
 
 class Field:
     def __init__(self, idx: int):

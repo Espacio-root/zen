@@ -48,8 +48,20 @@ class Config:
         else:
             raise Exception(f"Config with name {name} does not exist")
 
-    def update_config(self, name: str, fields: list, method: str):
-        config = self.get_config(name)
+    def get_configs(self, names):
+        configs = [self.get_config(name) for name in names]
+        lol = list(zip(*[config.values() for config in configs]))
+        c_conf = configs[0]
+        for l, field in zip(lol, self.fields):
+            for v in l:
+                c_conf[field.name.lower()] = field.post_update(
+                    field.update_add(field.pre_update(c_conf[field.name.lower()]), field.pre_update(v))
+                )
+        return c_conf
+        
+
+    def update_config(self, name: list, fields: list, method: str):
+        config = self.get_configs(name)
         fields = [
             field.process_field(values) for field, values in zip(self.fields, fields)
         ]
@@ -66,7 +78,7 @@ class Config:
     def parse_args(self):
         parser = ArgumentParser()
         parser.add_argument(
-            "-c", "--config", dest="name", help="Name of config to use", required=True
+            "-c", "--config", dest="name", help="Name of config to use", required=True, nargs="+"
         )
         parser.add_argument(
             "-n", "--new", dest="create", action="store_true", help="Create new config"
@@ -143,14 +155,15 @@ class Config:
             )
             self._add_subconfig(config)
         elif args.remove:
-            config = self.get_config(args.name)
+            config = self.get_configs(args.name)
             self.remove_config(args.name)
         else:
-            config = self.get_config(args.name)
+            config = self.get_configs(args.name)
 
         return config
 
 
 if __name__ == "__main__":
-    config = Config([Websites, UrlFilters, Programs])
+    plugins = [plugin(idx+1) for idx, plugin in enumerate([Websites, UrlFilters, Programs])]
+    config = Config(plugins)
     print(config.run())

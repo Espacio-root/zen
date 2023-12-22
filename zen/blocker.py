@@ -1,7 +1,7 @@
 from mitmproxy import ctx, http
 from config import Config
 from datetime import datetime, timedelta
-from plugins import Websites, UrlFilters, Programs
+from plugins.core import Websites, UrlFilters, Programs
 from threading import Thread
 from time import sleep
 import psutil
@@ -21,6 +21,7 @@ class Zen:
         for plugin in self.plugins:
             check, content = plugin._check_interception(flow)
             if check == True:
+                logging.info(f'{plugin.name}: {plugin.config}')
                 return True, content, ', '.join([f'plugin name: {plugin.name}', f'block_type: {plugin.block_m[plugin.block_type]}'])
         return False, flow, ''
 
