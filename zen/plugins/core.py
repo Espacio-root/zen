@@ -4,6 +4,7 @@ import psutil
 from time import sleep
 from threading import Thread
 from datetime import datetime, timedelta
+from bs4 import BeautifulSoup
 import logging
 
 class Field:
@@ -36,6 +37,15 @@ class Field:
 
     def load_config(self, config) -> None:
         self.config = config
+
+    def find_soup(self, flow, soup):
+        try:
+            soup = BeautifulSoup(flow.response.content.decode('utf-8'), 'html.parser')
+            return soup.select_one(soup)
+        except Exception as e:
+            logging.error(f"Error parsing XML: {e}")
+            return None
+        
 
     def is_present(self, flow) -> bool:
         return False

@@ -1,7 +1,6 @@
 from mitmproxy import ctx, http
-from config import Config
+from config import Config, plugins
 from datetime import datetime, timedelta
-from plugins.core import Websites, UrlFilters, Programs
 from threading import Thread
 from time import sleep
 import psutil
@@ -48,8 +47,12 @@ class Zen:
 
     def configure(self, updates):
         self.config.args = ctx.options.args
-        for plugin, config in zip(self.plugins, list(self.config.run().values())):
-            plugin.load_config(config)
+        config = self.config.run()
+        for plugin in self.plugins:
+            try:
+                plugin.load_config(config[plugin.name.lower()])
+            except:
+                plugin.load_config([])
         self.time = self.config.time
         self.end_time = (self.start_time + timedelta(minutes=self.config.time)).strftime('%I:%M %p')
         [plugin.pre_block() for plugin in self.plugins]
@@ -61,8 +64,9 @@ class Zen:
                 ctx.master.shutdown()
             sleep(1)
 
-    def request(self, flow):
+    def response(self, flow):
         check, content, cause = self._check_interception(flow)
+        logging.info(ctx.options.args)
         if check == True:
             flow.response = http.Response.make(
                 200,
@@ -72,5 +76,4 @@ class Zen:
         else:
             flow = content
             
-plugins = [f(idx+1) for idx,f in enumerate([Websites, UrlFilters, Programs])]
 addons = [Zen(plugins)]

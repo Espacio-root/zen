@@ -1,8 +1,10 @@
 from argparse import ArgumentParser
 from plugins.core import Websites, UrlFilters, Programs
+from plugins.youtube import YoutubeChannel
 import json
 import os
 import shlex
+import logging
 
 dir_name = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE_CONFIG_PATH = f"{dir_name}/configs/base_config.json"
@@ -29,7 +31,7 @@ class Config:
             field.process_field(values) for field, values in zip(self.fields, fields)
         ]
         return {
-            name: {
+            name[0]: {
                 field.name.lower(): values for field, values in zip(self.fields, fields)
             }
         }
@@ -50,15 +52,14 @@ class Config:
 
     def get_configs(self, names):
         configs = [self.get_config(name) for name in names]
-        lol = list(zip(*[config.values() for config in configs]))
         c_conf = configs[0]
-        for l, field in zip(lol, self.fields):
-            for v in l:
-                c_conf[field.name.lower()] = field.post_update(
-                    field.update_add(field.pre_update(c_conf[field.name.lower()]), field.pre_update(v))
+        for config in configs[1:]:
+            for k, v in config:
+                f = [field for field in self.fields if field.name.lower() == k][0]
+                c_conf[k] = f.post_update(
+                    f.update_add(f.pre_update(c_conf[k]), f.pre_update(v))
                 )
         return c_conf
-        
 
     def update_config(self, name: list, fields: list, method: str):
         config = self.get_configs(name)
@@ -73,12 +74,17 @@ class Config:
                     field.pre_update(values),
                 )
             )
-        return {name: config}
+        return {name[0]: config}
 
     def parse_args(self):
         parser = ArgumentParser()
         parser.add_argument(
-            "-c", "--config", dest="name", help="Name of config to use", required=True, nargs="+"
+            "-c",
+            "--config",
+            dest="name",
+            help="Name of config to use",
+            required=True,
+            nargs="+",
         )
         parser.add_argument(
             "-n", "--new", dest="create", action="store_true", help="Create new config"
@@ -98,7 +104,7 @@ class Config:
             "--blocktype",
             dest="block_type",
             help="Type of block: whitelist(w) or blacklist(b). Represent different setting for different plugin by concatenating the block_type. Example: wbb",
-            default="wbb",
+            default="wbbw",
         )
         parser.add_argument(
             "-t",
@@ -155,15 +161,16 @@ class Config:
             )
             self._add_subconfig(config)
         elif args.remove:
-            config = self.get_configs(args.name)
             self.remove_config(args.name)
-        else:
-            config = self.get_configs(args.name)
+        config = self.get_configs(args.name)
 
         return config
 
 
+plugins = [
+    plugin(idx + 1)
+    for idx, plugin in enumerate([YoutubeChannel, Websites, UrlFilters, Programs])
+]
 if __name__ == "__main__":
-    plugins = [plugin(idx+1) for idx, plugin in enumerate([Websites, UrlFilters, Programs])]
     config = Config(plugins)
     print(config.run())
