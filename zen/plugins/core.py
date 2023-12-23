@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 import logging
 
-class Field:
+class Plugin:
     def __init__(self, idx: int):
         self.name = "Name"
         self.help = "Help goes here"
@@ -20,7 +20,7 @@ class Field:
         self.time = 2
 
     @staticmethod
-    def process_field(values: list):
+    def process_plugin(values: list):
         return [value.strip() for value in values]
 
     def update_add(self, l1, l2):
@@ -29,11 +29,11 @@ class Field:
     def update_subtract(self, l1, l2):
         return list(set([e for e in l1 if e not in l2]))
 
-    def pre_update(self, field):
-        return field
+    def pre_update(self, plugin):
+        return plugin
 
-    def post_update(self, field):
-        return field
+    def post_update(self, plugin):
+        return plugin
 
     def load_config(self, config) -> None:
         self.config = config
@@ -60,14 +60,14 @@ class Field:
         else: return False, flow
 
 
-class Websites(Field):
+class Websites(Plugin):
     def __init__(self, idx: int):
         super().__init__(idx)
         self.name = "Websites"
         self.help = "List of websites to block in the format url1 url2 url3..."
 
     @staticmethod
-    def process_field(values: list):
+    def process_plugin(values: list):
         return [value.strip() for value in values if re.match(r"^https?://", value)]
 
     def is_present(self, flow):
@@ -75,14 +75,14 @@ class Websites(Field):
             return True
 
 
-class Programs(Field):
+class Programs(Plugin):
     def __init__(self, idx: int):
         super().__init__(idx)
         self.name = "Programs"
         self.help = "List of programs to block in the format path1 path2 path3..."
 
     @staticmethod
-    def process_field(values: list):
+    def process_plugin(values: list):
         return [value.strip() for value in values if os.path.exists(value.strip())]
     
     def pre_block(self):
@@ -109,7 +109,7 @@ class Programs(Field):
             sleep(1)
 
 
-class UrlFilters(Field):
+class UrlFilters(Plugin):
     def __init__(self, idx: int):
         super().__init__(idx)
         self.name = "UrlFilters"
@@ -118,7 +118,7 @@ class UrlFilters(Field):
         )
 
     @staticmethod
-    def process_field(values: list):
+    def process_plugin(values: list):
         d_filters = {}
         filters = list(map(lambda x: [x.split(",")[0], x.split(",")[1:]], values))
         for url, filter in filters:
@@ -128,15 +128,15 @@ class UrlFilters(Field):
                 d_filters[url] = filter
         return d_filters
 
-    def pre_update(self, field):
+    def pre_update(self, plugin):
         res = []
-        for w, fs in field.items():
+        for w, fs in plugin.items():
             for f in fs:
                 res.append(f"{w},{f}")
         return res
 
-    def post_update(self, field):
-        return self.process_field(field)
+    def post_update(self, plugin):
+        return self.process_plugin(plugin)
 
     def is_present(self, flow) -> bool:
         url = flow.request.pretty_url

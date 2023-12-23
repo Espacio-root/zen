@@ -11,9 +11,9 @@ BASE_CONFIG_PATH = f"{dir_name}/configs/base_config.json"
 
 
 class Config:
-    def __init__(self, fields: list):
+    def __init__(self, plugins: list):
         self.base_path = BASE_CONFIG_PATH
-        self.fields = fields
+        self.plugins = plugins
         self.args = None
         if not os.path.exists(BASE_CONFIG_PATH):
             self._write_config({})
@@ -26,13 +26,13 @@ class Config:
         with open(self.base_path, "w") as fp:
             json.dump(content, fp)
 
-    def create_config(self, name: str, fields: list) -> dict:
-        fields = [
-            field.process_field(values) for field, values in zip(self.fields, fields)
+    def create_config(self, name: str, plugins: list) -> dict:
+        plugins = [
+            plugin.process_plugin(values) for plugin, values in zip(self.plugins, plugins)
         ]
         return {
             name[0]: {
-                field.name.lower(): values for field, values in zip(self.fields, fields)
+                plugin.name.lower(): values for plugin, values in zip(self.plugins, plugins)
             }
         }
 
@@ -54,24 +54,27 @@ class Config:
         configs = [self.get_config(name) for name in names]
         c_conf = configs[0]
         for config in configs[1:]:
-            for k, v in config:
-                f = [field for field in self.fields if field.name.lower() == k][0]
-                c_conf[k] = f.post_update(
-                    f.update_add(f.pre_update(c_conf[k]), f.pre_update(v))
-                )
+            for k, v in config.items():
+                f = [plugin for plugin in self.plugins if plugin.name.lower() == k][0]
+                try:
+                    c_conf[k] = f.post_update(
+                        f.update_add(f.pre_update(c_conf[k]), f.pre_update(v))
+                    )
+                except KeyError:
+                    c_conf[k] = v
         return c_conf
 
-    def update_config(self, name: list, fields: list, method: str):
+    def update_config(self, name: list, plugins: list, method: str):
         config = self.get_configs(name)
-        fields = [
-            field.process_field(values) for field, values in zip(self.fields, fields)
+        plugins = [
+            plugin.process_plugin(values) for plugin, values in zip(self.plugins, plugins)
         ]
-        for field, values in zip(self.fields, fields):
-            fn = getattr(field, f"update_{method}")
-            config[field.name.lower()] = field.post_update(
+        for plugin, values in zip(self.plugins, plugins):
+            fn = getattr(plugin, f"update_{method}")
+            config[plugin.name.lower()] = plugin.post_update(
                 fn(
-                    field.pre_update(config[field.name.lower()]),
-                    field.pre_update(values),
+                    plugin.pre_update(config[plugin.name.lower()]),
+                    plugin.pre_update(values),
                 )
             )
         return {name[0]: config}
@@ -113,14 +116,14 @@ class Config:
             help="Time for which to maintain block in minutes. Example: 30 45 180",
             default=2,
         )
-        for field in self.fields:
+        for plugin in self.plugins:
             parser.add_argument(
-                f"-f{field.idx}",
-                f"--{field.name.lower()}",
-                dest=field.name.lower(),
+                f"-f{plugin.idx}",
+                f"--{plugin.name.lower()}",
+                dest=plugin.name.lower(),
                 nargs="+",
-                help=field.help,
-                default=field.default,
+                help=plugin.help,
+                default=plugin.default,
             )
         args = (
             parser.parse_args()
@@ -137,10 +140,10 @@ class Config:
     def _set_args(self, args):
         block_type = args.block_type
         if len(block_type) == 1:
-            block_type *= len(self.fields)
-        elif len(block_type) < len(self.fields):
-            block_type += block_type[-1] * len(self.fields) - len(block_type)
-        for plugin, b_type in zip(self.fields, block_type):
+            block_type *= len(self.plugins)
+        elif len(block_type) < len(self.plugins):
+            block_type += block_type[-1] * len(self.plugins) - len(block_type)
+        for plugin, b_type in zip(self.plugins, block_type):
             plugin.block_type = b_type
         self.time = args.time
 
@@ -151,13 +154,13 @@ class Config:
             method = "subtract" if args.remove else "add"
             config = self.update_config(
                 args.name,
-                [getattr(args, field.name.lower()) for field in self.fields],
+                [getattr(args, plugin.name.lower()) for plugin in self.plugins],
                 method,
             )
             self._add_subconfig(config)
         elif args.create:
             config = self.create_config(
-                args.name, [getattr(args, field.name.lower()) for field in self.fields]
+                args.name, [getattr(args, plugin.name.lower()) for plugin in self.plugins]
             )
             self._add_subconfig(config)
         elif args.remove:

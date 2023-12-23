@@ -1,15 +1,15 @@
-from plugins.core import Field
+from plugins.core import Plugin
 import logging
 import json
 
-class YoutubeChannel(Field):
+class YoutubeChannel(Plugin):
     
     def __init__(self, idx:int):
         super().__init__(idx)
         self.name = 'YoutubeChannel'
         self.help = 'Filters by Youtube channels. Format: channel1 channel2...'
 
-    def process_field(self, values):
+    def process_plugin(self, values):
         return [value.strip().lower() for value in values]
 
     def is_present(self, flow):
